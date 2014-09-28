@@ -1,0 +1,5 @@
+package org.avidj.snafu;
+
+message Record {
+  repeated string value = 1;
+}
