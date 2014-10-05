@@ -36,6 +36,8 @@ import javax.xml.namespace.QName;
 import javax.xml.ws.Service;
 import javax.xml.ws.soap.MTOMFeature;
 
+import org.avidj.snafu.SnafuRecord.Record;
+
 import com.sun.xml.ws.developer.StreamingAttachmentFeature;
 
 /**
@@ -99,7 +101,7 @@ public final class SnafucationWSClient implements SnafucationWS {
      * This implementation forwards calls to a possibly remote service.
      */
     @Override
-    public SnafucationResponse snafucate(int i) throws IOException {
+    public StreamingResponse<Record> snafucate(int i) throws IOException {
         return getService().snafucate(i);
     }
 }

@@ -34,7 +34,7 @@ import static org.hamcrest.CoreMatchers.equalTo;
 import static java.util.Arrays.asList;
 
 import org.avidj.snafu.SnafuRecord.Record;
-import org.avidj.snafu.sss.SnafucationResponse;
+import org.avidj.snafu.sss.StreamingResponse;
 import org.avidj.snafu.sss.SnafucationWSClient;
 import org.avidj.snafu.sss.Snafucator;
 import org.eclipse.jetty.webapp.WebAppContext;
@@ -155,35 +155,35 @@ public class SnafucationWSTest {
 
     @Test
     public void testQueryEmptyResultSet() throws IOException, InterruptedException {
-        SnafucationResponse response = client.snafucate(0);
+        StreamingResponse<Record> response = client.snafucate(0);
         Iterator<Record> resultSet = response.getResultSet();
         assertSame(RESULT_SET_EMPTY.iterator(), resultSet);
     }
 
     @Test
     public void testQuerySmallResultSet() throws IOException, InterruptedException {
-        SnafucationResponse response = client.snafucate(1);
+        StreamingResponse<Record> response = client.snafucate(1);
         Iterator<Record> resultSet = response.getResultSet();
         assertSame(RESULT_SET_1.iterator(), resultSet);
     }
 
     @Test
     public void testQueryLargeResultSet() throws IOException, InterruptedException {
-        SnafucationResponse response = client.snafucate(2);
+        StreamingResponse<Record> response = client.snafucate(2);
         Iterator<Record> resultSet = response.getResultSet();
         assertSame(RS_LARGE.iterator(), resultSet);
     }
 
     @Test
     public void testQueryVeryLargeResultSet() throws IOException, InterruptedException {
-        SnafucationResponse response = client.snafucate(3);
+        StreamingResponse<Record> response = client.snafucate(3);
         Iterator<Record> resultSet = response.getResultSet();
         assertSame(RS_VERY_LARGE.iterator(), resultSet);
     }
 
     @Test
     public void testQueryRidiculouslyLargeResultSet() throws IOException, InterruptedException {
-        SnafucationResponse response = client.snafucate(4);
+        StreamingResponse<Record> response = client.snafucate(4);
         Iterator<Record> resultSet = response.getResultSet();
         assertSame(RS_RIDICULOUSLY_LARGE.iterator(), resultSet);
     }

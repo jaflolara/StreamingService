@@ -28,7 +28,6 @@ package org.avidj.snafu.sss;
  * #L%
  */
 
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -43,6 +42,8 @@ import javax.activation.DataSource;
  * stream returned. Please note that this class violates the contract of the
  * {@link javax.activation.DataSource} interface as the streams returned can be
  * used only once.
+ * 
+ * TODO: use a MIMEDataSource? see StreamingDataSource subclasses
  */
 class PipedStreamDataSource implements DataSource {
     private final String mime;

@@ -31,6 +31,8 @@ package org.avidj.snafu.sss;
 import java.io.IOException;import java.io.InputStream;
 import java.io.OutputStream;
 import java.io.PipedOutputStream;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.concurrent.BlockingQueue;
@@ -44,10 +46,12 @@ import javax.xml.bind.annotation.XmlRootElement;
 import javax.xml.bind.annotation.XmlType;
 import javax.xml.bind.annotation.XmlAccessType;
 
-import org.avidj.snafu.SnafuRecord.Record;
+import org.avidj.ws.StreamingResponse.ContentType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.google.protobuf.AbstractMessage;
+import com.google.protobuf.Parser;
 import com.sun.xml.ws.developer.StreamingDataHandler;
 import com.sun.xml.ws.encoding.DataSourceStreamingDataHandler;
 
@@ -61,27 +65,29 @@ import com.sun.xml.ws.encoding.DataSourceStreamingDataHandler;
  * The tuples can be of varying length.
  */
 @XmlAccessorType(XmlAccessType.NONE)
-@XmlRootElement(name = "snafucationResponse")
-@XmlType(name = "snafucationResponseType")
-public class SnafucationResponse {
-    private static final Logger LOG = LoggerFactory.getLogger(SnafucationResponse.class);
+@XmlRootElement(name = "streamingResponse")
+@XmlType(name = "streamingResponseType")
+public class StreamingResponse<T extends AbstractMessage> {
+    private static final Logger LOG = LoggerFactory.getLogger(StreamingResponse.class);
     private static final String OCTET_STREAM = "application/octet-stream";
     private final Object lock = new Object();
     private DataHandler dataHandler;
-    private BlockingQueue<Record> queue;
-    private Iterator<Record> resultIterator;
+    private BlockingQueue<T> queue;
+    private Iterator<T> resultIterator;
     private boolean closed = false;
 
-    SnafucationResponse() { }
+    StreamingResponse() { }
 
     /**
      * Create a new response at the server side given an iterator over the
      * results.
      * 
-     * @param resultSet the result set to encapsulate, not {@code null}
-     * @throws IOException if an error occurs while initializing the data handler
+     * @param resultSet
+     *            the result set to encapsulate, not {@code null}
+     * @throws IOException
+     *             if an error occurs while initializing the data handler
      */
-    SnafucationResponse(Iterator<Record> resultSet) throws IOException {
+    StreamingResponse(Iterator<T> resultSet) throws IOException {
         if (resultSet == null) {
             throw new NullPointerException("resultSet");
         }
@@ -105,13 +111,40 @@ public class SnafucationResponse {
      * 
      * @param aDataHandler a data handler encapsulating the binary attachment
      * @throws IOException if an error occurs while initializing the decoding of the result set
+     * @throws ClassNotFoundException if the message type is not on the classpath of the client
+     * @throws IllegalAccessException if the default constructor of the message type is not visible
+     * @throws InstantiationException if the message parser could not be constructed
      */
-    void setResults(DataHandler aDataHandler) throws IOException {
-        queue = new ArrayBlockingQueue<Record>(1000);
+    void setResults(DataHandler aDataHandler) throws 
+    IOException, ClassNotFoundException, InstantiationException, IllegalAccessException {
+        queue = new ArrayBlockingQueue<T>(1000);
         resultIterator = new ResultIterator();
         StreamingDataHandler dh = (StreamingDataHandler) aDataHandler;
-        SnafucationDecoder decoder = new SnafucationDecoder(dh.readOnce(), queue);
-        new Thread(decoder).start(); // start to fill the queue to make results available
+        InputStream in = dh.readOnce();
+        
+        ContentType type = ContentType.parseDelimitedFrom(in);
+        if ( type == null ) {
+            synchronized ( lock ) {
+                closed = true;
+                lock.notifyAll();
+                return;
+            }
+        }
+        try {
+            @SuppressWarnings("unchecked")
+            Class<? extends AbstractMessage> messageType = 
+                (Class<? extends AbstractMessage>)Class.forName(type.getType());
+            Method getDefaultInstance = messageType.getMethod("getDefaultInstance");
+            AbstractMessage defaultInstance = (AbstractMessage) getDefaultInstance.invoke(null);
+            @SuppressWarnings("unchecked")
+            Parser<T> parser = (Parser<T>)defaultInstance.getParserForType();
+    
+            MessageReader decoder = new MessageReader(in, parser, queue);
+            new Thread(decoder).start(); // start to fill the queue to make results available
+        } catch (NoSuchMethodException | SecurityException | IllegalArgumentException | InvocationTargetException e) {
+            // TODO Auto-generated catch block
+            e.printStackTrace();
+        }
     }
 
     /**
@@ -120,7 +153,7 @@ public class SnafucationResponse {
      * 
      * @return an iterator over the result set
      */
-    public Iterator<Record> getResultSet() {
+    public Iterator<T> getResultSet() {
         return resultIterator;
     }
 
@@ -133,13 +166,12 @@ public class SnafucationResponse {
      * @return a data handler that can be transferred to the client
      * @throws IOException if an I/O error occurs while creating the piped data source
      */
-    private DataHandler encode(Iterator<Record> resultSet) throws IOException {
+    private DataHandler encode(Iterator<T> resultSet) throws IOException {
         PipedOutputStream out = new PipedOutputStream();
-        SnafucationEncoder encoder = new SnafucationEncoder(out, resultSet);
+        MessageWriter encoder = new MessageWriter(out, resultSet);
         dataHandler = 
                 new DataSourceStreamingDataHandler(new PipedStreamDataSource(out, OCTET_STREAM));
-        new Thread(encoder).start(); // start writing to the stream
-                                     // asynchronously
+        new Thread(encoder).start(); // start writing to the stream asynchronously
         return dataHandler;
     }
 
@@ -163,9 +195,9 @@ public class SnafucationResponse {
      * closes the given output stream after having written the last element of
      * the iterator.
      */
-    private static class SnafucationEncoder implements Runnable {
+    private static class MessageWriter implements Runnable {
         private final OutputStream out;
-        private final Iterator<Record> resultSet;
+        private final Iterator<? extends AbstractMessage> resultSet;
         private int rowCount = 0;
 
         /**
@@ -174,7 +206,7 @@ public class SnafucationResponse {
          * @param aResultSet
          *            the result set to be written
          */
-        SnafucationEncoder(OutputStream aOut, Iterator<Record> aResultSet) {
+        MessageWriter(OutputStream aOut, Iterator<? extends AbstractMessage> aResultSet) {
             assert (aOut != null);
             assert (aResultSet != null);
             out = aOut;
@@ -184,12 +216,22 @@ public class SnafucationResponse {
         @Override
         public void run() {
             try ( OutputStream out = this.out ) {
+                if ( resultSet.hasNext() ) {
+                    rowCount++;
+                    AbstractMessage row = resultSet.next();
+                    // first write the content type as a header
+                    ContentType type = 
+                            ContentType.newBuilder().setType(row.getClass().getName()).build();
+                    type.writeDelimitedTo(out);
+                    // write the size of the row
+                    row.writeDelimitedTo(out);                    
+                }
                 while ( resultSet.hasNext() ) {
                     rowCount++;
                     if (rowCount % 100000 == 0) {
                         LOG.debug("server: writing element " + rowCount);
                     }
-                    Record row = resultSet.next();
+                    AbstractMessage row = resultSet.next();
                     // write the size of the row
                     row.writeDelimitedTo(out);
                 }
@@ -202,28 +244,29 @@ public class SnafucationResponse {
     /**
      * This decoder takes an input stream, reads rows from it and offers them to
      * the given blocking queue. The expected encoding is the one produced by
-     * the {@link org.avidj.snafu.sss.SnafucationResponse.SnafucationEncoder}.
+     * the {@link org.avidj.snafu.sss.StreamingResponse.MessageWriter}.
      */
-    private class SnafucationDecoder implements Runnable {
-        private final BlockingQueue<Record> resultSet;
+    private class MessageReader implements Runnable {
+        private final BlockingQueue<T> resultSet;
         private final InputStream in;
+        private final Parser<T> parser;
 
         /**
-         * @param aIn
-         *            the stream to read from
-         * @param aQueue
-         *            the queue to offer results to
+         * @param aIn the stream to read from
+         * @param aParser the parser for input records 
+         * @param aQueue the queue to offer results to
          */
-        SnafucationDecoder(InputStream aIn, BlockingQueue<Record> aQueue) {
+        MessageReader(InputStream aIn, Parser<T> aParser, BlockingQueue<T> aQueue) {
             resultSet = aQueue;
             in = aIn;
+            parser = aParser;
         }
 
         @Override
         public void run() {
             try ( InputStream in = this.in ) {
-                Record record = null;
-                while ( ( record = Record.parseDelimitedFrom(in) ) != null ) {
+                T record = null;
+                while ( ( record = parser.parseDelimitedFrom(in) ) != null ) {
                     put(record);
                 }
             } catch (IOException e) {
@@ -239,7 +282,7 @@ public class SnafucationResponse {
             }
         }
 
-        private void put(Record row) throws InterruptedException {
+        private void put(T row) throws InterruptedException {
             synchronized (lock) {
                 while ( !resultSet.offer(row) ) {
                     lock.wait();
@@ -252,7 +295,7 @@ public class SnafucationResponse {
     /**
      * Allows for asynchronously iterating results at the client while the server is still writing.
      */
-    private class ResultIterator implements Iterator<Record> {
+    private class ResultIterator implements Iterator<T> {
         private int rowCount = 0;
 
         /**
@@ -283,13 +326,13 @@ public class SnafucationResponse {
          * @throws NoSuchElementException if {@code !hasNext()}
          */
         @Override
-        public Record next() throws NoSuchElementException {
+        public T next() throws NoSuchElementException {
             if (!hasNext()) {
                 throw new NoSuchElementException();
             }
             try {
                 synchronized (lock) {
-                    Record next = queue.take();
+                    T next = queue.take();
                     rowCount++;
                     lock.notifyAll(); // notify waiting threads about new
                                       // available elements

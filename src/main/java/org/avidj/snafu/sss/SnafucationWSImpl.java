@@ -33,6 +33,7 @@ import java.io.IOException;
 import javax.jws.WebService;
 import javax.xml.ws.soap.MTOM;
 
+import org.avidj.snafu.SnafuRecord.Record;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -50,7 +51,7 @@ public class SnafucationWSImpl implements SnafucationWS {
     private Snafucator snafucator;
 
     @Override
-    public SnafucationResponse snafucate(int i) throws IOException {
-        return new SnafucationResponse(snafucator.snafucate(i));
+    public StreamingResponse<Record> snafucate(int i) throws IOException {
+        return new StreamingResponse<>(snafucator.snafucate(i));
     }
 }

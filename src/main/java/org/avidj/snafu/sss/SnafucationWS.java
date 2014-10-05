@@ -33,6 +33,8 @@ import java.io.IOException;
 import javax.jws.WebMethod;
 import javax.jws.WebService;
 
+import org.avidj.snafu.SnafuRecord.Record;
+
 /**
  * Interface of the snafucation web service.
  */
@@ -40,7 +42,7 @@ import javax.jws.WebService;
 public interface SnafucationWS {
 
     /**
-     * Snafucate the given input, the result is a {@link org.avidj.snafu.sss.SnafucationResponse} 
+     * Snafucate the given input, the result is a {@link org.avidj.snafu.sss.StreamingResponse} 
      * that encapsulates a stream of rows of arbitrary length each.
      * 
      * @param i the argument to snafucate
@@ -48,5 +50,5 @@ public interface SnafucationWS {
      * @throws IOException if an error occurs in lower layers
      */
     @WebMethod(operationName = "snafucate")
-    public SnafucationResponse snafucate(int i) throws IOException;
+    public StreamingResponse<Record> snafucate(int i) throws IOException;
 }

@@ -1,0 +1,5 @@
+package org.avidj.ws;
+
+message ContentType {
+  required string type = 1;
+}
