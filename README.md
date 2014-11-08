@@ -7,16 +7,16 @@ The tests contain an example web service that transfers a million small protocol
 
 In the web service interface you must define the result type of the web method to be a StreamingResponse of the desired record type:
 
-@WebMethod(operationName = "snafucate")
-public StreamingResponse<Record> snafucate(int i) throws IOException;
+    @WebMethod(operationName = "snafucate")
+    public StreamingResponse<Record> snafucate(int i) throws IOException;
 
 In the web service implementation you must enable MTOM and streaming attachments:
 
-@WebService(endpointInterface = "org.avidj.snafu.sss.SnafucationWS")
-@MTOM // enable the MTOM feature which allows to parse rows at the client while server is sending
-@StreamingAttachment(parseEagerly = false, dir = "/tmp", memoryThreshold = 4000000L)
-@Service
-public class SnafucationWSImpl implements SnafucationWS { .. }
+    @WebService(endpointInterface = "org.avidj.snafu.sss.SnafucationWS")
+    @MTOM // enable the MTOM feature which allows to parse rows at the client while server is sending
+    @StreamingAttachment(parseEagerly = false, dir = "/tmp", memoryThreshold = 4000000L)
+    @Service
+    public class SnafucationWSImpl implements SnafucationWS {
 
 On the client you must also enable MTOM and streaming attachments:
 
