@@ -154,6 +154,7 @@
             <configuration>
               <sources>
                 <source>src/main/proto</source>
+                <source>src/test/proto</source>
                 <source>target/generated-sources/protobuf/java</source>
               </sources>
             </configuration>

@@ -56,12 +56,22 @@ import com.sun.xml.ws.developer.StreamingDataHandler;
 import com.sun.xml.ws.encoding.DataSourceStreamingDataHandler;
 
 /**
- * A response to a request consisting of a stream of protocol buffers. This stream can be 
- * accessed by calling {@link #getResultSet()} which returns an iterator backed by a
- * blocking queue. This allows to stream structured results from the server to
- * the client. So even very large results need not be held in memory. It is assumed that 
- * all buffers in the stream are instances of the same protocol buffer type which must be 
- * available both at the client and the server.   
+ * A response consisting of a stream of protocol buffers. This stream can be 
+ * accessed on the client side by calling {@link #getResultSet()} which returns
+ * an iterator backed by a blocking queue. This allows to stream structured 
+ * results from the server to the client. So even very large results need not 
+ * be held in memory. It is assumed that all buffers in the stream are 
+ * instances of the same protocol buffer type which must be available both at 
+ * the client and the server.
+ * 
+ * Assumptions made
+ * <ul>
+ *   <li>All buffers in the stream are of the protocol buffer type.</li>
+ *   <li>The protocol buffer type is on the {@code CLASSPATH} on the client side.</li>
+ *   <li>There is a no-arg method {@code getDefaultInstance()} in the protcol buffer type.</li>
+ *   <li></li>
+ *   <li></li>
+ * </ul>
  */
 @XmlAccessorType(XmlAccessType.NONE)
 @XmlRootElement(name = "streamingResponse")
@@ -74,8 +84,8 @@ public class StreamingResponse<T extends AbstractMessage> {
     private BlockingQueue<T> queue;
     private Iterator<T> resultIterator;
     private boolean closed = false;
-
-    StreamingResponse() { }
+    
+    StreamingResponse() { /* included to make JAXB happy */ }
 
     /**
      * Create a new response at the server side given an iterator over the
@@ -86,15 +96,16 @@ public class StreamingResponse<T extends AbstractMessage> {
      * @throws IOException
      *             if an error occurs while initializing the data handler
      */
-    StreamingResponse(Iterator<T> resultSet) throws IOException {
+    public StreamingResponse(Iterator<T> resultSet) throws IOException {
         if (resultSet == null) {
             throw new NullPointerException("resultSet");
         }
-        dataHandler = encode(resultSet);
+        dataHandler = write(resultSet);
     }
 
     /**
-     * Returns a data handler that encapsulates the result set, called by JAXB.
+     * Returns a data handler that encapsulates the result set, called by JAXB
+     * on the server side.
      * 
      * @return a data handler encapsulating the binary attachment
      */
@@ -138,11 +149,11 @@ public class StreamingResponse<T extends AbstractMessage> {
             @SuppressWarnings("unchecked")
             Parser<T> parser = (Parser<T>)defaultInstance.getParserForType();
     
-            MessageReader decoder = new MessageReader(in, parser, queue);
-            new Thread(decoder).start(); // start to fill the queue to make results available
-        } catch (NoSuchMethodException | SecurityException | IllegalArgumentException | InvocationTargetException e) {
-            // TODO Auto-generated catch block
-            e.printStackTrace();
+            MessageReader reader = new MessageReader(in, parser, queue);
+            new Thread(reader).start(); // start to fill the queue to make results available
+        } catch ( NoSuchMethodException | SecurityException | 
+                  IllegalArgumentException | InvocationTargetException e ) {
+            throw new RuntimeException("Could not find the method MessageType.getDefaultInstance");
         }
     }
 
@@ -165,12 +176,12 @@ public class StreamingResponse<T extends AbstractMessage> {
      * @return a data handler that can be transferred to the client
      * @throws IOException if an I/O error occurs while creating the piped data source
      */
-    private DataHandler encode(Iterator<T> resultSet) throws IOException {
+    private DataHandler write(Iterator<T> resultSet) throws IOException {
         PipedOutputStream out = new PipedOutputStream();
-        MessageWriter encoder = new MessageWriter(out, resultSet);
+        MessageWriter writer = new MessageWriter(out, resultSet);
         dataHandler = 
                 new DataSourceStreamingDataHandler(new PipedStreamDataSource(out, OCTET_STREAM));
-        new Thread(encoder).start(); // start writing to the stream asynchronously
+        new Thread(writer).start(); // start writing to the stream asynchronously
         return dataHandler;
     }
 
@@ -190,14 +201,14 @@ public class StreamingResponse<T extends AbstractMessage> {
     }
 
     /**
-     * Writes the contents of an iterator to an output stream. This encoder
+     * Writes the contents of an iterator to an output stream. This writer
      * closes the given output stream after having written the last element of
      * the iterator.
      */
     private static class MessageWriter implements Runnable {
         private final OutputStream out;
         private final Iterator<? extends AbstractMessage> resultSet;
-        private int rowCount = 0;
+        private int protoCount = 0;
 
         /**
          * @param aOut
@@ -216,23 +227,21 @@ public class StreamingResponse<T extends AbstractMessage> {
         public void run() {
             try ( OutputStream out = this.out ) {
                 if ( resultSet.hasNext() ) {
-                    rowCount++;
-                    AbstractMessage row = resultSet.next();
+                    protoCount++;
+                    AbstractMessage proto = resultSet.next();
                     // first write the content type as a header
                     ContentType type = 
-                            ContentType.newBuilder().setType(row.getClass().getName()).build();
+                            ContentType.newBuilder().setType(proto.getClass().getName()).build();
                     type.writeDelimitedTo(out);
-                    // write the size of the row
-                    row.writeDelimitedTo(out);                    
+                    proto.writeDelimitedTo(out);                    
                 }
                 while ( resultSet.hasNext() ) {
-                    rowCount++;
-                    if (rowCount % 100000 == 0) {
-                        LOG.debug("server: writing element " + rowCount);
+                    protoCount++;
+                    if (protoCount % 100000 == 0) {
+                        LOG.debug("server: writing element " + protoCount);
                     }
-                    AbstractMessage row = resultSet.next();
-                    // write the size of the row
-                    row.writeDelimitedTo(out);
+                    AbstractMessage proto = resultSet.next();
+                    proto.writeDelimitedTo(out);
                 }
             } catch (IOException e) {
                 LOG.error("Could not write to output stream.", e);
@@ -241,9 +250,10 @@ public class StreamingResponse<T extends AbstractMessage> {
     }
 
     /**
-     * This decoder takes an input stream, reads rows from it and offers them to
-     * the given blocking queue. The expected encoding is the one produced by
-     * the {@link org.avidj.snafu.sss.StreamingResponse.MessageWriter}.
+     * This reader takes an input stream, reads protocol buffers from it and 
+     * offers them to the given blocking queue. The expected encoding is the 
+     * one produced by the 
+     * {@link org.avidj.snafu.sss.StreamingResponse.MessageWriter}.
      */
     private class MessageReader implements Runnable {
         private final BlockingQueue<T> resultSet;
@@ -252,7 +262,7 @@ public class StreamingResponse<T extends AbstractMessage> {
 
         /**
          * @param aIn the stream to read from
-         * @param aParser the parser for input records 
+         * @param aParser the parser for input protocol buffers 
          * @param aQueue the queue to offer results to
          */
         MessageReader(InputStream aIn, Parser<T> aParser, BlockingQueue<T> aQueue) {
@@ -264,9 +274,9 @@ public class StreamingResponse<T extends AbstractMessage> {
         @Override
         public void run() {
             try ( InputStream in = this.in ) {
-                T record = null;
-                while ( ( record = parser.parseDelimitedFrom(in) ) != null ) {
-                    put(record);
+                T proto = null;
+                while ( ( proto = parser.parseDelimitedFrom(in) ) != null ) {
+                    put(proto);
                 }
             } catch (IOException e) {
                 throw new RuntimeException("Could not read from stream.", e);
@@ -281,21 +291,22 @@ public class StreamingResponse<T extends AbstractMessage> {
             }
         }
 
-        private void put(T row) throws InterruptedException {
+        private void put(T proto) throws InterruptedException {
             synchronized (lock) {
-                while ( !resultSet.offer(row) ) {
+                while ( !resultSet.offer(proto) ) {
                     lock.wait();
                 }
-                lock.notifyAll(); // notify readers that new rows are available
+                lock.notifyAll(); // notify readers that new protocol buffers are available
             }
         }
     }
 
     /**
-     * Allows for asynchronously iterating results at the client while the server is still writing.
+     * Allows for asynchronously iterating results at the client while the 
+     * server is still writing.
      */
     private class ResultIterator implements Iterator<T> {
-        private int rowCount = 0;
+        private int protoCount = 0;
 
         /**
          * {@inheritDoc}
@@ -332,11 +343,11 @@ public class StreamingResponse<T extends AbstractMessage> {
             try {
                 synchronized (lock) {
                     T next = queue.take();
-                    rowCount++;
+                    protoCount++;
                     lock.notifyAll(); // notify waiting threads about new
-                                      // available elements
-                    if (rowCount % 100000 == 0) {
-                        LOG.debug("client: read element " + rowCount);
+                                      // available protocol buffers
+                    if (protoCount % 100000 == 0) {
+                        LOG.debug("client: read element " + protoCount);
                     }
                     return next;
                 }
