@@ -36,11 +36,7 @@
     <param-value>/WEB-INF/applicationContext*.xml</param-value>
   </context-param>
 
-<!--   <listener>
-    <listener-class>com.sun.xml.ws.transport.http.servlet.WSServletContextListener</listener-class>
-    <listener-class>com.sun.xml.ws.transport.http.servlet.JAXRPCContextListener</listener-class>
-  </listener>
- -->  <listener>
+  <listener>
     <listener-class>org.springframework.web.context.ContextLoaderListener</listener-class>
   </listener> 
   

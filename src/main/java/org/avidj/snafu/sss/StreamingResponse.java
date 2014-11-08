@@ -69,8 +69,8 @@ import com.sun.xml.ws.encoding.DataSourceStreamingDataHandler;
  *   <li>All buffers in the stream are of the protocol buffer type.</li>
  *   <li>The protocol buffer type is on the {@code CLASSPATH} on the client side.</li>
  *   <li>There is a no-arg method {@code getDefaultInstance()} in the protcol buffer type.</li>
- *   <li></li>
- *   <li></li>
+ *   <li>This class maintains a blocking queue of at most 1000 records at the client and at the 
+ *     server.</li>
  * </ul>
  */
 @XmlAccessorType(XmlAccessType.NONE)
