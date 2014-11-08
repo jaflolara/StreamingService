@@ -71,10 +71,10 @@ public final class SnafucationWSClient implements SnafucationWS {
             throw new IllegalStateException("Could not create web service endpoint.", e);
         }
         SnafucationWS port = result.getPort(SnafucationWS.class,
-                // Enable MTOM at the client for transmission of binary data
+                // Enable MTOM at the client for transmitting binary data
                 new MTOMFeature(),
-                // Load off attachments to the file system when exceeding 4MB in size.
-                new StreamingAttachmentFeature("/tmp", false, 4000000L));
+                // Load off attachments to the file system when too large
+                new StreamingAttachmentFeature("/tmp", false, 1000000L));
         return port;
     }
 
