@@ -13,10 +13,9 @@ In the web service interface you must define the result type of the web method t
 In the web service implementation you must enable MTOM and streaming attachments:
 
     @WebService(endpointInterface = "org.avidj.snafu.sss.SnafucationWS")
-    @MTOM // enable the MTOM feature which allows to parse rows at the client while server is sending
-    @StreamingAttachment(parseEagerly = false, dir = "/tmp", memoryThreshold = 4000000L)
+    @MTOM // enable the MTOM feature for parsing buffers at the client while server is sending
+    @StreamingAttachment(parseEagerly = false, dir = "/tmp", memoryThreshold = 1000000L)
     @Service
-    public class SnafucationWSImpl implements SnafucationWS {
 
 On the client you must also enable MTOM and streaming attachments:
 
@@ -30,9 +29,9 @@ On the client you must also enable MTOM and streaming attachments:
             throw new IllegalStateException("Could not create web service endpoint.", e);
         }
         SnafucationWS port = result.getPort(SnafucationWS.class,
-                // Enable MTOM at the client for transmission of binary data
+                // Enable MTOM at the client for transmitting binary data
                 new MTOMFeature(),
-                // Load off attachments to the file system when exceeding 4MB in size.
-                new StreamingAttachmentFeature("/tmp", false, 4000000L));
+                // Load off attachments to the file system when too large
+                new StreamingAttachmentFeature("/tmp", false, 1000000L));
         return port;
     }
