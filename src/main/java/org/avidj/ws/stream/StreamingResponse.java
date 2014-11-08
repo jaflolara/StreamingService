@@ -153,7 +153,7 @@ public class StreamingResponse<T extends AbstractMessage> {
             new Thread(reader).start(); // start to fill the queue to make results available
         } catch ( NoSuchMethodException | SecurityException | 
                   IllegalArgumentException | InvocationTargetException e ) {
-            throw new RuntimeException("Could not find the method MessageType.getDefaultInstance");
+            throw new RuntimeException("Couldn't find MessageType.getDefaultInstance().", e);
         }
     }
 
