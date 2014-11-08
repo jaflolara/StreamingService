@@ -1,7 +1,7 @@
 StreamingService
 ================
 
-A DataHandler for SOAP web services using MTOM to stream large amounts of records encoded as protocol buffers. The client processes records while the server is still sending.
+A response type for SOAP web services using MTOM to stream large amounts of records encoded as protocol buffers. The client processes records while the server is still sending.
 
 The tests contain an example web service that transfers a million small protocol buffers in a few seconds with the client and server running on the same machine.
 
