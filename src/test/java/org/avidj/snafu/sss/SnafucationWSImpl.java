@@ -44,7 +44,7 @@ import com.sun.xml.ws.developer.StreamingAttachment;
  * Implementation of the snafucation web service.
  */
 @WebService(endpointInterface = "org.avidj.snafu.sss.SnafucationWS")
-@MTOM // enable the MTOM feature which for parsing buffers at the client while server is sending
+@MTOM // enable the MTOM feature for parsing buffers at the client while server is sending
 @StreamingAttachment(parseEagerly = false, dir = "/tmp", memoryThreshold = 1000000L)
 @Service
 public class SnafucationWSImpl implements SnafucationWS {
