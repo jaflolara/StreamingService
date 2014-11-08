@@ -3,7 +3,7 @@
 	<modelVersion>4.0.0</modelVersion>
 
 	<groupId>org.avidj</groupId>
-	<artifactId>SnafucationSoapStreamingService</artifactId>
+	<artifactId>StreamingService</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<packaging>war</packaging>
 	<organization>
@@ -11,7 +11,7 @@
 	</organization>
 	<inceptionYear>2014</inceptionYear>
 
-	<name>SnafucationSoapStreamingService</name>
+	<name>StreamingService</name>
 
 	<properties>
 		<compileSource>1.7</compileSource>
