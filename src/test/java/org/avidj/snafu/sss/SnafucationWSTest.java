@@ -34,7 +34,7 @@ import static org.hamcrest.CoreMatchers.equalTo;
 import static java.util.Arrays.asList;
 
 import org.avidj.snafu.SnafuRecord.Record;
-import org.avidj.snafu.sss.StreamingResponse;
+import org.avidj.ws.stream.StreamingResponse;
 import org.avidj.snafu.sss.SnafucationWSClient;
 import org.avidj.snafu.sss.Snafucator;
 import org.eclipse.jetty.webapp.WebAppContext;

@@ -37,6 +37,7 @@ import javax.xml.ws.Service;
 import javax.xml.ws.soap.MTOMFeature;
 
 import org.avidj.snafu.SnafuRecord.Record;
+import org.avidj.ws.stream.StreamingResponse;
 
 import com.sun.xml.ws.developer.StreamingAttachmentFeature;
 

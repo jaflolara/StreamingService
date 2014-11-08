@@ -1,4 +1,4 @@
-package org.avidj.snafu.sss;
+package org.avidj.ws.stream;
 
 /*
  * #%L
@@ -253,7 +253,7 @@ public class StreamingResponse<T extends AbstractMessage> {
      * This reader takes an input stream, reads protocol buffers from it and 
      * offers them to the given blocking queue. The expected encoding is the 
      * one produced by the 
-     * {@link org.avidj.snafu.sss.StreamingResponse.MessageWriter}.
+     * {@link org.avidj.ws.stream.StreamingResponse.MessageWriter}.
      */
     private class MessageReader implements Runnable {
         private final BlockingQueue<T> resultSet;

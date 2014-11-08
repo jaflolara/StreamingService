@@ -1,4 +1,4 @@
-package org.avidj.snafu.sss;
+package org.avidj.ws.stream;
 
 /*
  * #%L

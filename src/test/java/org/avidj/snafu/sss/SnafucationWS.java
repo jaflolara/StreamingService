@@ -34,6 +34,7 @@ import javax.jws.WebMethod;
 import javax.jws.WebService;
 
 import org.avidj.snafu.SnafuRecord.Record;
+import org.avidj.ws.stream.StreamingResponse;
 
 /**
  * Interface of the snafucation web service.

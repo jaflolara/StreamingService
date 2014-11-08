@@ -34,6 +34,7 @@ import javax.jws.WebService;
 import javax.xml.ws.soap.MTOM;
 
 import org.avidj.snafu.SnafuRecord.Record;
+import org.avidj.ws.stream.StreamingResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
