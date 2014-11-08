@@ -56,13 +56,12 @@ import com.sun.xml.ws.developer.StreamingDataHandler;
 import com.sun.xml.ws.encoding.DataSourceStreamingDataHandler;
 
 /**
- * A response to a snafucation request. This result set can be accessed by
- * calling {@link #getResultSet()} which returns an iterator backed by a
+ * A response to a request consisting of a stream of protocol buffers. This stream can be 
+ * accessed by calling {@link #getResultSet()} which returns an iterator backed by a
  * blocking queue. This allows to stream structured results from the server to
- * the client. So even very large results need not be held in memory. This
- * example returns results in the form of {@code Record} objects which encapsulate
- * lists of strings resembling (stringly typed) relational tuples. 
- * The tuples can be of varying length.
+ * the client. So even very large results need not be held in memory. It is assumed that 
+ * all buffers in the stream are instances of the same protocol buffer type which must be 
+ * available both at the client and the server.   
  */
 @XmlAccessorType(XmlAccessType.NONE)
 @XmlRootElement(name = "streamingResponse")
