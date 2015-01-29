@@ -1,7 +1,7 @@
 StreamingService
 ================
 
-A response type for SOAP web services using MTOM to stream large amounts of records encoded as protocol buffers. The client processes records while the server is still sending.
+A response type for SOAP web services using MTOM to stream large amounts of records encoded as protocol buffers. The client processes records while the server is still sending. There is no need to keep the whole result set in main memory neither on the server nor on the client as the response type consumes buffers from an iterator and writes them to a stream while the client consumes records from an iterator that is fed from the stream. The response type is agnostic about the type of protocol buffers transferred, it just must be known on both the client and the server side.
 
 The tests contain an example web service that transfers a million small protocol buffers in a few seconds with the client and server running on the same machine.
 
